@@ -81,17 +81,12 @@ pipeline {
         
         stage('Security Scan') {
             steps {
-                sh '''
-                    # Install Trivy if not already installed
-                    which trivy || (
-                        wget https://github.com/aquasecurity/trivy/releases/download/v0.48.0/trivy_0.48.0_Linux-64bit.tar.gz
-                        tar zxvf trivy_0.48.0_Linux-64bit.tar.gz
-                        sudo mv trivy /usr/local/bin/
-                    )
-                    
-                    # Scan Docker image
-                    trivy image --severity HIGH,CRITICAL ${APP_NAME}:${IMAGE_TAG}
-                '''
+                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                    sh '''
+                        snyk auth $SNYK_TOKEN
+                        snyk container test ${APP_NAME}:${IMAGE_TAG} --severity-threshold=high --fail-on=all
+                    '''
+                }
             }
         }
         
